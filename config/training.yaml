@@ -1,0 +1,6 @@
+# config/training.yaml
+training:
+  data_dir: "./data"  # Directory for MNIST data
+  batch_size: 64  # Default batch size; will be tuned by BO. This will be overriden when we are testing for the three acquisition functions
+  epochs: 10  # Maximum number of epochs
+  seed: 42  # Seed for reproducibility

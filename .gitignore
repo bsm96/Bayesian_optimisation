@@ -1,0 +1,18 @@
+# Ignore generated data and result folders
+data/
+models/
+outputs/
+results/
+
+# Ignore Python compiled files
+__pycache__/
+*.pyc
+
+# Ignore virtual environment files (if any)
+venv/
+env/
+
+# Ignore IDE-specific files (optional, depending on your editor)
+*.idea/
+*.vscode/
+*.DS_Store  # Mac-specific file

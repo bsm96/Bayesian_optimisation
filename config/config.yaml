@@ -1,0 +1,13 @@
+# config/config.yaml
+defaults:
+  - _self_
+  - model
+  - training
+  - optimizer
+  - bo  # Added to include BO configuration
+
+hydra:
+  job:
+    chdir: false  # Prevents Hydra from changing the working directory
+  run:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}  # Saves output in separate directories

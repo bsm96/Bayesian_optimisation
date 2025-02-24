@@ -1,0 +1,10 @@
+# config/model.yaml
+model:
+  in_channels: 1  # MNIST has 1 channel (grayscale)
+  conv_layers:
+    - filters: 32
+      kernel_size: 3
+    - filters: 64
+      kernel_size: 3
+  dropout: 0.5  # Default dropout rate; could be tuned
+  activation: "relu"  # Activation function

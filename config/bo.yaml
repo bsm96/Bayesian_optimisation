@@ -1,0 +1,9 @@
+# config/bo.yaml
+bo:
+  batch_size_min: 64    # Minimum batch size for BO search space
+  batch_size_max: 256   # Maximum batch size for BO search space
+  lr_min: 0.00001       # Minimum learning rate for BO search space (1e-5)
+  lr_max: 0.01          # Maximum learning rate for BO search space (1e-2)
+  n_calls: 30           # Total number of BO iterations
+  n_initial_points: 10  # Number of initial random points
+  acq_func: "EI"        # Acquisition function (Expected Improvement). This is overriden when we are testing for the three acquisition functions

@@ -1,0 +1,5 @@
+# config/optimizer.yaml # used if we want to train without optimizing hyperparameters
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.001  # Default learning rate; will be tuned by BO
+  betas: [0.9, 0.999]  # Default Adam betas

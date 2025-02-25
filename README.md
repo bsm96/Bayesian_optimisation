@@ -10,7 +10,7 @@ Navigate to the project directory:
  - Install dependencies: pip install -r requirements.txt
 
 Running the Project
- - Run the following Bayesian Optimization script in the terminal: python src/bayesian_opt.py
+ - Run the following Bayesian Optimization script in the terminal: python -m src.bayesian_opt
 
 This will:
 
@@ -18,4 +18,31 @@ This will:
  - Train the CNN model for each set of hyperparameters.
  - Save results in the results/ directory as .pkl files.
  - Save trained models in the models/ directory as .pth files.
- - Generate and display plots to visualize the optimization process.
+
+ Generate plots:
+ - Generate and display plots to visualize the optimization process: python src/plot_results.py
+
+
+ ### Reconstruct a Model: To reconstruct a model from a saved .pth file (e.g., models/model_iter_0.pth), you can use:
+import torch
+from src.model import CNN
+from hydra import compose, initialize
+
+# Load the checkpoint
+checkpoint = torch.load("models/model_iter_0.pth")
+cfg = checkpoint['cfg']
+
+# Rebuild the model
+model = CNN(
+    in_channels=cfg.model.in_channels,
+    conv_layers=cfg.model.conv_layers,
+    dropout=cfg.model.dropout,
+    activation=cfg.model.activation
+)
+model.load_state_dict(checkpoint['model_state_dict'])
+
+# Rebuild the optimizer
+optimizer = optim.Adam(model.parameters(), lr=cfg.optimizer.lr)
+optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+print(f"Model reconstructed with accuracy: {checkpoint['accuracy']:.2f}%")

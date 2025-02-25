@@ -5,14 +5,15 @@ import torch.nn as nn
 import torch.optim as optim
 from .model import CNN
 from .data_loader import load_mnist
-from tqdm import tqdm  # Import tqdm for progress bars
+from tqdm import tqdm
+import os
 
 def train_model(cfg, save_model_path):
     """Train the CNN model and return validation accuracy.
     
     Args:
         cfg: Hydra configuration object containing training and model parameters.
-        save_model_path (str): Path to save the trained model.
+        save_model_path (str): Path to save the trained model and metadata.
     
     Returns:
         float: Validation accuracy as a percentage.
@@ -40,10 +41,10 @@ def train_model(cfg, save_model_path):
     criterion = nn.CrossEntropyLoss()
     
     # Training loop with progress bar for epochs
+    training_metrics = {"epoch_losses": []}
     for epoch in tqdm(range(cfg.training.epochs), desc="Training Epochs"):
         model.train()
         epoch_loss = 0
-        # Progress bar for batches within each epoch
         for batch_idx, (data, target) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch+1}/{cfg.training.epochs}")):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
@@ -53,8 +54,9 @@ def train_model(cfg, save_model_path):
             optimizer.step()
             epoch_loss += loss.item()
         
-        # Print epoch loss for monitoring
-        print(f"Epoch {epoch+1}/{cfg.training.epochs}, Loss: {epoch_loss/len(train_loader):.4f}")
+        avg_loss = epoch_loss / len(train_loader)
+        training_metrics["epoch_losses"].append(avg_loss)
+        print(f"Epoch {epoch+1}/{cfg.training.epochs}, Loss: {avg_loss:.4f}")
     
     # Evaluate on the test set
     model.eval()
@@ -70,7 +72,16 @@ def train_model(cfg, save_model_path):
     
     accuracy = 100. * correct / total
     
-    # Save the trained model
-    torch.save(model.state_dict(), save_model_path)
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(save_model_path), exist_ok=True)
+    
+    # Save the trained model and all relevant data
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'cfg': cfg,  # Full Hydra configuration for reconstruction
+        'training_metrics': training_metrics,  # Losses per epoch
+        'accuracy': accuracy  # Final validation accuracy
+    }, save_model_path)
     
     return accuracy

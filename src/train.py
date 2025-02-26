@@ -1,5 +1,4 @@
 # src/train.py
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,15 +8,7 @@ from tqdm import tqdm
 import os
 
 def train_model(cfg, save_model_path):
-    """Train the CNN model and return validation accuracy.
-    
-    Args:
-        cfg: Hydra configuration object containing training and model parameters.
-        save_model_path (str): Path to save the trained model and metadata.
-    
-    Returns:
-        float: Validation accuracy as a percentage.
-    """
+    """Train the CNN model and return validation accuracy."""
     # Set seeds for PyTorch reproducibility
     torch.manual_seed(cfg.training.seed)
     if torch.cuda.is_available():

@@ -20,7 +20,7 @@ This will:
  - Save trained models in the models/ directory as .pth files.
 
  Generate plots:
- - Generate and display plots to visualize the optimization process: python src/plot_results.py
+ - Generate and display plots to visualize the optimization process: python -m src.plot_results
 
 
  ### Reconstruct a Model: To reconstruct a model from a saved .pth file (e.g., models/model_iter_0.pth), you can use:

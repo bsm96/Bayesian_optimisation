@@ -1,5 +1,4 @@
 # src/plot_utils.py
-
 import matplotlib.pyplot as plt
 import numpy as np
 from skopt.plots import plot_evaluations
@@ -80,13 +79,16 @@ def plot_gp_regression(result, param_range, param_name, fixed_param_value=None, 
     y_pred, y_std = gp_model.predict(X_plot, return_std=True)
     y_pred = -y_pred  # Convert negative accuracy back to positive
     
+    # Convert result.x_iters to NumPy array for advanced indexing
+    x_iters = np.array(result.x_iters)
+    
     plt.figure(figsize=(8, 5))
     plt.plot(param_range, y_pred, label='GP Mean')
     plt.fill_between(param_range, y_pred - 1.96 * y_std, y_pred + 1.96 * y_std, alpha=0.3, label='95% Confidence Interval')
     if param_name == "learning_rate":
-        plt.scatter(result.x_iters[:, 1], -result.func_vals, c='red', label='Evaluated Points')
+        plt.scatter(x_iters[:, 1], -result.func_vals, c='red', label='Evaluated Points')
     elif param_name == "batch_size":
-        plt.scatter(result.x_iters[:, 0], -result.func_vals, c='red', label='Evaluated Points')
+        plt.scatter(x_iters[:, 0], -result.func_vals, c='red', label='Evaluated Points')
     plt.title(f'GP Regression for {param_name}')
     plt.xlabel(param_name)
     plt.ylabel('Validation Accuracy (%)')

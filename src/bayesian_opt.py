@@ -27,7 +27,7 @@ def objective(params, iteration, cfg, acq_name):
     accuracy = train_model(cfg_iter, save_model_path=f"models/model_{acq_name}_iter_{iteration}.pth")
     return -accuracy  # Minimize negative accuracy
 
-def run_random_search(cfg, n_iterations=3):
+def run_random_search(cfg, n_iterations=15):
     """Run Random Search over the parameter space and return used parameters."""
     space = {
         "training.batch_size": range(cfg.bo.batch_size_min, cfg.bo.batch_size_max + 1, 32),
@@ -88,7 +88,8 @@ if __name__ == "__main__":
                 n_initial_points=cfg.bo.n_initial_points,
                 acq_func=acq_name,
                 kappa=acq_func,
-                random_state=cfg.training.seed
+                random_state=cfg.training.seed,
+                n_jobs=-1  # Use all available cores
             )
         else:
             result = gp_minimize(
@@ -97,7 +98,8 @@ if __name__ == "__main__":
                 n_calls=cfg.bo.n_calls,
                 n_initial_points=cfg.bo.n_initial_points,
                 acq_func=acq_func,
-                random_state=cfg.training.seed
+                random_state=cfg.training.seed,
+                n_jobs=-1  # Use all available cores
             )
         
         # Save results as CSV

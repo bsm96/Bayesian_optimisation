@@ -1,47 +1,79 @@
 # src/plot_utils.py
 import matplotlib.pyplot as plt
 import numpy as np
-from skopt.plots import plot_evaluations
+from skopt.acquisition import gaussian_ei, gaussian_pi, gaussian_lcb
 
-def generate_batch_size_range(min_size, max_size, step=32):
-    """Generate a range of batch sizes from min_size to max_size with a given step.
-    
-    Args:
-        min_size (int): Minimum batch size.
-        max_size (int): Maximum batch size.
-        step (int): Step size between batch sizes.
-    
-    Returns:
-        np.ndarray: Array of batch sizes.
-    """
-    return np.arange(min_size, max_size + 1, step)
+def plot_2d_heatmap(result, batch_size_range, lr_range, acq_func=None):
+    """Generates a 2D heatmap for the GP surrogate or the acquisition function.
 
-def plot_convergence(result, acq_name):
-    """Plot the convergence of the best observed validation accuracy over iterations for BO.
-    
     Args:
         result: skopt OptimizeResult object.
-        acq_name: Name of the acquisition function (e.g., 'EI', 'PI', 'LCB').
+        batch_size_range: Array of batch sizes.
+        lr_range: Array of learning rates.
+        acq_func: Name of the acquisition function ('EI', 'PI', 'LCB') or None for the GP surrogate.
     """
-    plt.figure(figsize=(8, 5))
-    best_accuracy = np.maximum.accumulate(-result.func_vals)  # Convert negative loss to accuracy
-    plt.plot(best_accuracy, marker='o', label=f'{acq_name} Convergence', color='blue')
-    plt.title(f'Convergence Plot for {acq_name}')
-    plt.xlabel('Iterations')
-    plt.ylabel('Best Validation Accuracy (%)')
-    plt.legend()
-    plt.grid(True)
+    gp_model = result.models[-1]  # Uses the last trained GP model
+    
+    # Create a grid for batch_size and learning_rate
+    X_plot = np.array(np.meshgrid(batch_size_range, lr_range)).T.reshape(-1, 2)
+    
+    if acq_func:
+        y_opt = np.max(-result.func_vals)  # Best observed value (converted to accuracy)
+        if acq_func == 'EI':
+            values = gaussian_ei(X_plot, gp_model, y_opt=-y_opt, xi=0.01)
+        elif acq_func == 'PI':
+            values = gaussian_pi(X_plot, gp_model, y_opt=-y_opt, xi=0.01)
+        elif acq_func == 'LCB':
+            values = gaussian_lcb(X_plot, gp_model, kappa=2.576)
+        else:
+            raise ValueError("Invalid acquisition function")
+        values = values.reshape(len(batch_size_range), len(lr_range))
+        title = f"{acq_func} Acquisition Function"
+    else:
+        y_pred, _ = gp_model.predict(X_plot, return_std=True)
+        values = -y_pred.reshape(len(batch_size_range), len(lr_range))  # Convert to accuracy
+        title = "GP Surrogate Mean"
+
+    # Plot heatmap
+    plt.figure(figsize=(10, 5))
+    plt.contourf(batch_size_range, lr_range, values.T, cmap='viridis')
+    plt.colorbar(label=title)
+    plt.xlabel('Batch Size')
+    plt.ylabel('Learning Rate')
+    plt.title(title)
     plt.show()
 
-def plot_evaluations(result, param_names):
-    """Plot the evaluated points in the parameter space.
-    
+def plot_2d_gp_surrogate(result, batch_size_range, lr_range):
+    """Plot the GP surrogate mean and uncertainty in 2D.
+
     Args:
         result: skopt OptimizeResult object.
-        param_names: List of parameter names (e.g., ['batch_size', 'learning_rate']).
+        batch_size_range: Array of batch sizes.
+        lr_range: Array of learning rates.
     """
-    plot_evaluations(result, bins=20)
-    plt.suptitle('Evaluated Points in Parameter Space')
+    gp_model = result.models[-1]  # Uses the last trained GP model
+    X_plot = np.array(np.meshgrid(batch_size_range, lr_range)).T.reshape(-1, 2)
+    y_pred, y_std = gp_model.predict(X_plot, return_std=True)
+    y_pred = -y_pred.reshape(len(batch_size_range), len(lr_range))  # Converts to accuracy
+    y_std = y_std.reshape(len(batch_size_range), len(lr_range))
+
+    # Plot mean
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.contourf(batch_size_range, lr_range, y_pred.T, cmap='viridis')
+    plt.colorbar(label='Validation Accuracy (%)')
+    plt.xlabel('Batch Size')
+    plt.ylabel('Learning Rate')
+    plt.title('GP Surrogate Mean', fontsize=10)
+
+    # Plot uncertainty
+    plt.subplot(1, 2, 2)
+    plt.contourf(batch_size_range, lr_range, y_std.T, cmap='viridis')
+    plt.colorbar(label='Standard Deviation')
+    plt.xlabel('Batch Size')
+    plt.ylabel('Learning Rate')
+    plt.title('GP Surrogate Uncertainty', fontsize=10)
+    plt.tight_layout()
     plt.show()
 
 def plot_gp_regression(result, param_range, param_name, fixed_param_value=None, fixed_param_name=None):
@@ -58,20 +90,16 @@ def plot_gp_regression(result, param_range, param_name, fixed_param_value=None, 
     if param_name == "learning_rate":
         X_plot = np.atleast_2d(param_range).T
         if fixed_param_value is not None:
-            # Fix batch_size (first parameter)
             X_plot = np.hstack((np.full((X_plot.shape[0], 1), fixed_param_value), X_plot))
         else:
-            # Default to median batch size
-            median_batch_size = np.median(result.space[0])
+            median_batch_size = np.median([x[0] for x in result.x_iters])
             X_plot = np.hstack((np.full((X_plot.shape[0], 1), median_batch_size), X_plot))
     elif param_name == "batch_size":
         X_plot = np.atleast_2d(param_range).T
         if fixed_param_value is not None:
-            # Fix learning_rate (second parameter)
             X_plot = np.hstack((X_plot, np.full((X_plot.shape[0], 1), fixed_param_value)))
         else:
-            # Default to median learning rate
-            median_lr = np.median(result.space[1])
+            median_lr = np.median([x[1] for x in result.x_iters])
             X_plot = np.hstack((X_plot, np.full((X_plot.shape[0], 1), median_lr)))
     else:
         raise ValueError("Invalid parameter name")
@@ -79,7 +107,6 @@ def plot_gp_regression(result, param_range, param_name, fixed_param_value=None, 
     y_pred, y_std = gp_model.predict(X_plot, return_std=True)
     y_pred = -y_pred  # Convert negative accuracy back to positive
     
-    # Convert result.x_iters to NumPy array for advanced indexing
     x_iters = np.array(result.x_iters)
     
     plt.figure(figsize=(8, 5))
@@ -93,6 +120,7 @@ def plot_gp_regression(result, param_range, param_name, fixed_param_value=None, 
     plt.xlabel(param_name)
     plt.ylabel('Validation Accuracy (%)')
     plt.legend()
+    plt.grid(True)
     plt.show()
 
 def plot_acquisition(result, acq_func, param_range, param_name, fixed_param_value=None, fixed_param_name=None):
@@ -106,21 +134,20 @@ def plot_acquisition(result, acq_func, param_range, param_name, fixed_param_valu
         fixed_param_value: Value to fix the other parameter at.
         fixed_param_name: Name of the fixed parameter.
     """
-    from skopt.acquisition import gaussian_ei, gaussian_pi, gaussian_lcb
     gp_model = result.models[-1]
     if param_name == "learning_rate":
         X_plot = np.atleast_2d(param_range).T
         if fixed_param_value is not None:
             X_plot = np.hstack((np.full((X_plot.shape[0], 1), fixed_param_value), X_plot))
         else:
-            median_batch_size = np.median(result.space[0])
+            median_batch_size = np.median([x[0] for x in result.x_iters])
             X_plot = np.hstack((np.full((X_plot.shape[0], 1), median_batch_size), X_plot))
     elif param_name == "batch_size":
         X_plot = np.atleast_2d(param_range).T
         if fixed_param_value is not None:
             X_plot = np.hstack((X_plot, np.full((X_plot.shape[0], 1), fixed_param_value)))
         else:
-            median_lr = np.median(result.space[1])
+            median_lr = np.median([x[1] for x in result.x_iters])
             X_plot = np.hstack((X_plot, np.full((X_plot.shape[0], 1), median_lr)))
     else:
         raise ValueError("Invalid parameter name")
@@ -153,19 +180,73 @@ def plot_acquisition(result, acq_func, param_range, param_name, fixed_param_valu
     plt.title(f'GP and {acq_func} Acquisition Function for {param_name}')
     plt.show()
 
-def plot_random_search_convergence(accuracies, title="Random Search Convergence"):
-    """Plot convergence of the best validation accuracy over random search iterations.
+def plot_1d_gp_surrogate(result, param_range, param_name, fixed_param_value, fixed_param_name):
+    """Plot the GP surrogate mean and uncertainty as a 1D slice.
     
     Args:
-        accuracies (list): List of validation accuracies from random search.
-        title (str): Title of the plot.
+        result: skopt OptimizeResult object.
+        param_range: Array of values for the varying parameter.
+        param_name: Name of the varying parameter ('learning_rate' or 'batch_size').
+        fixed_param_value: Value for the fixed parameter.
+        fixed_param_name: Name of the fixed parameter.
     """
-    best_accuracies = np.maximum.accumulate(accuracies)  # Best accuracy up to each iteration
+    gp_model = result.models[-1]
+    if param_name == "learning_rate":
+        X_plot = np.array([[fixed_param_value, v] for v in param_range])
+    elif param_name == "batch_size":
+        X_plot = np.array([[v, fixed_param_value] for v in param_range])
+    else:
+        raise ValueError("Invalid parameter name")
+
+    y_pred, y_std = gp_model.predict(X_plot, return_std=True)
+    y_pred = -y_pred  # Convert to accuracy
+
     plt.figure(figsize=(8, 5))
-    plt.plot(best_accuracies, marker='o', label='Random Search Convergence', color='orange')
-    plt.title(title)
-    plt.xlabel('Iterations')
-    plt.ylabel('Best Validation Accuracy (%)')
+    plt.plot(param_range, y_pred, label='GP Mean')
+    plt.fill_between(param_range, y_pred - 1.96 * y_std, y_pred + 1.96 * y_std, alpha=0.3, label='95% CI')
+    plt.xlabel(param_name)
+    plt.ylabel('Validation Accuracy (%)')
+    plt.title(f'GP Surrogate Mean for {param_name} (fixed {fixed_param_name}={fixed_param_value})')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def plot_1d_acquisition(result, acq_func, param_range, param_name, fixed_param_value, fixed_param_name, xi=0.01, kappa=2.576):
+    """Plot the acquisition function as a 1D slice.
+    
+    Args:
+        result: skopt OptimizeResult object.
+        acq_func: Name of the acquisition function ('EI', 'PI', 'LCB').
+        param_range: Array of values for the varying parameter.
+        param_name: Name of the varying parameter ('learning_rate' or 'batch_size').
+        fixed_param_value: Value for the fixed parameter.
+        fixed_param_name: Name of the fixed parameter.
+        xi: Exploration parameter for EI and PI.
+        kappa: Parameter for LCB.
+    """
+    gp_model = result.models[-1]
+    y_opt = np.max(-result.func_vals)  # Best observed accuracy
+    if param_name == "learning_rate":
+        X_plot = np.array([[fixed_param_value, v] for v in param_range])
+    elif param_name == "batch_size":
+        X_plot = np.array([[v, fixed_param_value] for v in param_range])
+    else:
+        raise ValueError("Invalid parameter name")
+
+    if acq_func == 'EI':
+        acq_values = gaussian_ei(X_plot, gp_model, y_opt=-y_opt, xi=xi)
+    elif acq_func == 'PI':
+        acq_values = gaussian_pi(X_plot, gp_model, y_opt=-y_opt, xi=xi)
+    elif acq_func == 'LCB':
+        acq_values = gaussian_lcb(X_plot, gp_model, kappa=kappa)
+    else:
+        raise ValueError("Invalid acquisition function")
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(param_range, acq_values, label=f'{acq_func} Acquisition')
+    plt.xlabel(param_name)
+    plt.ylabel(f'{acq_func} Value')
+    plt.title(f'{acq_func} Acquisition Function for {param_name} (fixed {fixed_param_name}={fixed_param_value})')
     plt.legend()
     plt.grid(True)
     plt.show()

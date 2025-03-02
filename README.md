@@ -21,28 +21,4 @@ This will:
 
  Generate plots:
  - Generate and display plots to visualize the optimization process: python -m src.plot_results
-
-
- ### Reconstruct a Model: To reconstruct a model from a saved .pth file (e.g., models/model_iter_0.pth), you can use:
-import torch
-from src.model import CNN
-from hydra import compose, initialize
-
-# Load the checkpoint
-checkpoint = torch.load("models/model_iter_0.pth")
-cfg = checkpoint['cfg']
-
-# Rebuild the model
-model = CNN(
-    in_channels=cfg.model.in_channels,
-    conv_layers=cfg.model.conv_layers,
-    dropout=cfg.model.dropout,
-    activation=cfg.model.activation
-)
-model.load_state_dict(checkpoint['model_state_dict'])
-
-# Rebuild the optimizer
-optimizer = optim.Adam(model.parameters(), lr=cfg.optimizer.lr)
-optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
-print(f"Model reconstructed with accuracy: {checkpoint['accuracy']:.2f}%")
+ - 1D plot of learning_rate: python -m src.plot_learning_rate

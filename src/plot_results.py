@@ -58,7 +58,7 @@ if __name__ == "__main__":
     plt.figure(figsize=(10, 6))
     plt.plot(bo_ei_accuracies, label="BO EI", marker="o", color="blue")
     plt.plot(bo_pi_accuracies, label="BO PI", marker="s", color="orange")
-    plt.plot(bo_lcb_accuracies, label="BO LCB", marker="^", color="green")
+    plt.plot(bo_lcb_accuracies, label="BO UCB", marker="^", color="green")
     plt.plot(random_accuracies, label="Random Search", marker="d", color="red")
     plt.xlabel("Iterations")
     plt.ylabel("Best Validation Accuracy (%)")

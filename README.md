@@ -22,3 +22,4 @@ This will:
  Generate plots:
  - Generate and display plots to visualize the optimization process: python -m src.plot_results
  - 1D plot of learning_rate: python -m src.plot_learning_rate
+ - plot of UCB: python -m src.plot_ucb
